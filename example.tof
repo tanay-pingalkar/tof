@@ -1,0 +1,5 @@
+sum : (num1, num2) -> {
+  stdio(num1 + num2)
+}
+
+sum(5, 2)
