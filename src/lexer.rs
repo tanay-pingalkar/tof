@@ -95,7 +95,7 @@ impl<'a> Lexer<'a> {
                 } else {
                     self.coverage = self.coverage + 1;
                     let mut value: Vec<LEX> = Vec::new();
-                    let args = value_str
+                    let mut args = value_str
                         .split_once("(")
                         .unwrap()
                         .1
@@ -104,7 +104,11 @@ impl<'a> Lexer<'a> {
                         .0
                         .split(",")
                         .map(|s| s.trim().to_string())
-                        .collect();
+                        .collect::<Vec<String>>();
+
+                    if args[0].trim() == "" {
+                        args.pop();
+                    }
 
                     self.deep_lex(&mut value);
                     self.lex.push(LEX::DEF(Def {
@@ -150,7 +154,7 @@ impl<'a> Lexer<'a> {
                 } else {
                     self.coverage = self.coverage + 1;
                     let mut value: Vec<LEX> = Vec::new();
-                    let args = value_str
+                    let mut args = value_str
                         .split_once("(")
                         .unwrap()
                         .1
@@ -159,7 +163,11 @@ impl<'a> Lexer<'a> {
                         .0
                         .split(",")
                         .map(|s| s.trim().to_string())
-                        .collect();
+                        .collect::<Vec<String>>();
+
+                    if args[0].trim() == "" {
+                        args.pop();
+                    }
 
                     self.deep_lex(&mut value);
 
@@ -173,6 +181,7 @@ impl<'a> Lexer<'a> {
                     }));
                 }
             } else if line.trim().starts_with("return") {
+                let line = line.replace("return", "");
                 sub_lex.push(LEX::RETURN(Expr {
                     line_number: self.coverage,
                     node: self.equation_resolver(&line),
@@ -193,36 +202,59 @@ impl<'a> Lexer<'a> {
         let mut node = Box::new(Node::VOID);
 
         let mut foo = 0;
+        let mut bracks = 0;
 
         // while foo < splited.len() {
         let mut part = Vec::new();
-        let mut in_fn: bool = false;
         loop {
-            if JOINS_REGEX.is_match(splited[foo]) & !in_fn {
+            if JOINS_REGEX.is_match(splited[foo]) && bracks == 0 {
                 let word = part.join("").trim().to_string();
 
                 if word.starts_with("\"") && word.ends_with("\"") {
+                    let word = word.trim_matches('\"').to_string();
                     node = Box::new(Node::Str(word));
                 } else if word.contains("(") && word.contains(")") {
-                    let func_vec = FUNC_REGEX.split(&word).collect::<Vec<&str>>();
+                    let (name, args_str) = word.split_once("(").unwrap();
+                    let name = name.to_string();
+                    let mut args_str = args_str.split("").collect::<Vec<&str>>();
+                    args_str.pop();
+                    args_str.pop();
 
-                    let args = func_vec[1]
-                        .split(",")
-                        .collect::<Vec<&str>>()
-                        .iter()
-                        .map(|val| {
-                            if val.trim() != "" {
-                                self.equation_resolver(val)
-                            } else {
-                                Box::new(Node::VOID)
+                    let args_str = args_str.join("");
+                    let args_str = args_str.split("").collect::<Vec<&str>>();
+                    let mut args = Vec::new();
+                    let mut part = Vec::new();
+                    let mut bracks = 0;
+                    let mut i = 0;
+                    loop {
+                        if args_str[i] == "," && bracks == 0 {
+                            args.push(self.equation_resolver(part.join("").as_str()));
+                            part = Vec::new();
+                        } else {
+                            part.push(args_str[i]);
+                        }
+
+                        if args_str[i] == "(" {
+                            bracks = bracks + 1;
+                        }
+                        if args_str[i] == ")" {
+                            bracks = bracks - 1;
+                        }
+
+                        i = i + 1;
+
+                        if i == args_str.len() && bracks == 0 {
+                            if part.join("").trim() != "" {
+                                args.push(self.equation_resolver(part.join("").as_str()));
                             }
-                        })
-                        .collect::<Vec<Box<Node>>>();
 
-                    node = Box::new(Node::FCCALL {
-                        args,
-                        name: func_vec[0].to_string(),
-                    })
+                            break;
+                        } else if i == args_str.len() {
+                            panic!("close the brackets")
+                        }
+                    }
+
+                    node = Box::new(Node::FCCALL { args, name })
                 } else if CALL_REGEX.is_match(&word) {
                     node = Box::new(Node::CALL(word))
                 } else if INT_REGEX.is_match(&word) {
@@ -253,40 +285,65 @@ impl<'a> Lexer<'a> {
                 break;
             }
             if splited[foo] == "(" {
-                in_fn = true;
+                bracks = bracks + 1;
             }
 
-            if splited[foo] == ")" && in_fn {
-                in_fn = false;
+            if splited[foo] == ")" {
+                bracks = bracks - 1
             }
+
             part.push(splited[foo]);
 
             foo = foo + 1;
 
-            if foo == splited.len() {
+            if foo == splited.len() && bracks == 0 {
                 let word = part.join("").trim().to_string();
 
                 if word.starts_with("\"") && word.ends_with("\"") {
+                    let word = word.trim_matches('\"').to_string();
                     node = Box::new(Node::Str(word));
                 } else if word.contains("(") && word.contains(")") {
-                    let func_vec = FUNC_REGEX.split(&word).collect::<Vec<&str>>();
-                    let args = func_vec[1]
-                        .split(",")
-                        .collect::<Vec<&str>>()
-                        .iter()
-                        .map(|val| {
-                            if val.trim() != "" {
-                                self.equation_resolver(val)
-                            } else {
-                                Box::new(Node::VOID)
-                            }
-                        })
-                        .collect::<Vec<Box<Node>>>();
+                    let (name, args_str) = word.split_once("(").unwrap();
+                    let name = name.to_string();
+                    let mut args_str = args_str.split("").collect::<Vec<&str>>();
+                    args_str.pop();
+                    args_str.pop();
 
-                    node = Box::new(Node::FCCALL {
-                        args,
-                        name: func_vec[0].to_string(),
-                    })
+                    let args_str = args_str.join("");
+                    let args_str = args_str.split("").collect::<Vec<&str>>();
+                    let mut args = Vec::new();
+                    let mut part = Vec::new();
+                    let mut bracks = 0;
+                    let mut i = 0;
+                    loop {
+                        if args_str[i] == "," && bracks == 0 {
+                            args.push(self.equation_resolver(part.join("").as_str()));
+                            part = Vec::new();
+                        } else {
+                            part.push(args_str[i]);
+                        }
+
+                        if args_str[i] == "(" {
+                            bracks = bracks + 1;
+                        }
+                        if args_str[i] == ")" {
+                            bracks = bracks - 1;
+                        }
+
+                        i = i + 1;
+
+                        if i == args_str.len() && bracks == 0 {
+                            if part.join("").trim() != "" {
+                                args.push(self.equation_resolver(part.join("").as_str()));
+                            }
+
+                            break;
+                        } else if i == args_str.len() {
+                            panic!("close the brackets")
+                        }
+                    }
+
+                    node = Box::new(Node::FCCALL { args, name })
                 } else if CALL_REGEX.is_match(&word) {
                     node = Box::new(Node::CALL(word))
                 } else if INT_REGEX.is_match(&word) {
@@ -295,6 +352,8 @@ impl<'a> Lexer<'a> {
                     panic!("type not found");
                 }
                 break;
+            } else if foo == splited.len() {
+                panic!("bracket not closed {}", bracks);
             }
         }
 

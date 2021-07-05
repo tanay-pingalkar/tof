@@ -1,4 +1,5 @@
 use crate::lexer::*;
+use crate::prelude::*;
 use std::collections::{BTreeMap, VecDeque};
 
 #[derive(Debug, Clone)]
@@ -16,26 +17,26 @@ pub struct Vars {
 }
 
 impl Vars {
-    fn new() -> Vars {
+    pub fn new() -> Vars {
         let mut list = VecDeque::new();
         list.push_back(BTreeMap::new());
         Vars { vars: list }
     }
 
-    fn push(&mut self) {
+    pub fn push(&mut self) {
         self.vars.push_back(BTreeMap::new());
     }
 
-    fn pop(&mut self) {
+    pub fn pop(&mut self) {
         self.vars.pop_back();
     }
 
-    fn insert(&mut self, id: String, data: Variable) {
+    pub fn insert(&mut self, id: String, data: Variable) {
         let m = self.vars.back_mut().unwrap();
         m.insert(id, data);
     }
 
-    fn get(&mut self, id: &str) -> Option<&Variable> {
+    pub fn get(&mut self, id: &str) -> Option<&Variable> {
         for m in self.vars.iter().rev() {
             if let Some(val) = m.get(id) {
                 return Some(val);
@@ -51,18 +52,8 @@ pub fn start(lex: Vec<LEX>) {
     eval(lex, &mut data);
 }
 
-pub fn prelude(data: &mut Vars) {
-    data.insert(
-        "stdio".to_string(),
-        Variable::Rusty(|args| {
-            println!("{:?}", args[0]);
-            Variable::Void
-        }),
-    );
-}
-
 pub fn eval(lex: Vec<LEX>, data: &mut Vars) -> Variable {
-    let t = Variable::Void;
+    let mut t = Variable::Void;
     for line in lex {
         match line {
             LEX::DEF(def) => {
@@ -72,7 +63,7 @@ pub fn eval(lex: Vec<LEX>, data: &mut Vars) -> Variable {
                 eval_expr(expr, data);
             }
             LEX::RETURN(expr) => {
-                eval_expr(expr, data);
+                t = eval_expr(expr, data);
             }
         }
     }
@@ -93,6 +84,7 @@ pub fn eval_expr(expr: Expr, mut data: &mut Vars) -> Variable {
         Node::Lamda { args, value } => v = Variable::Lamda { args, value },
         Node::FCCALL { ref args, ref name } => {
             let mut fc = data.clone();
+
             let fc = fc.get(&name).unwrap();
             let args_t_s = args
                 .iter()
@@ -108,14 +100,14 @@ pub fn eval_expr(expr: Expr, mut data: &mut Vars) -> Variable {
                 .collect();
             match &fc {
                 Variable::Rusty(fnc) => {
-                    fnc(args_t_s);
+                    v = fnc(args_t_s);
                 }
                 Variable::Lamda { args, value } => {
                     for (pos, e) in args.iter().enumerate() {
                         data.insert(e.to_string(), args_t_s[pos].clone());
                     }
 
-                    eval(value.clone(), data);
+                    v = eval(value.clone(), data);
                 }
                 _ => {
                     panic!("not callable");

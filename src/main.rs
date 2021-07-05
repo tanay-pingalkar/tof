@@ -14,6 +14,7 @@ struct Opts {
 }
 
 mod lexer;
+mod prelude;
 mod runtime;
 
 use crate::lexer::Lexer;
@@ -27,9 +28,9 @@ fn main() {
     let mut lexer = Lexer::new(&string);
     lexer.start_lex();
 
-    start(lexer.lex());
-
     if show_lex {
         fs::write(format!("{}.lex.tof", file), format!("{:#?}", lexer.lex())).unwrap();
     }
+
+    start(lexer.lex());
 }

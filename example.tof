@@ -1,5 +1,13 @@
-sum : (num1, num2) -> {
-  stdio(num1 + num2)
+
+sum : () -> {
+  num1 : int(stdin("num1 = "))
+  num2 : int(stdin("num2 = "))
+  stdout("result = ", add(num1,num2))
 }
 
-sum(5, 2)
+
+add : (num1,num2) -> {
+  return num1 + num2
+}
+
+sum()
