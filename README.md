@@ -14,8 +14,8 @@ a function programming language for real world applications made in rust (in dev
 ```
 // this is a sum example
 sum : () -> {
-  num1 : stdin("num1 = ")
-  num2 : stdin("num2 = ")
+  num1 : int(stdin("num1 = "))
+  num2 : int(stdin("num2 = "))
   stdout("result = ", num1 + num2)
 }
 
