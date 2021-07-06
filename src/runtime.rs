@@ -1,6 +1,8 @@
 use crate::lexer::*;
 use crate::prelude::*;
 use std::collections::{BTreeMap, VecDeque};
+use std::ops::Index;
+use std::ops::IndexMut;
 
 #[derive(Debug, Clone)]
 pub enum Variable {
@@ -20,6 +22,7 @@ impl Vars {
     pub fn new() -> Vars {
         let mut list = VecDeque::new();
         list.push_back(BTreeMap::new());
+
         Vars { vars: list }
     }
 
@@ -36,35 +39,67 @@ impl Vars {
         m.insert(id, data);
     }
 
-    pub fn get(&mut self, id: &str) -> Option<&Variable> {
-        for m in self.vars.iter().rev() {
-            if let Some(val) = m.get(id) {
-                return Some(val);
+    pub fn get(&mut self, id: &str, mut scope: usize) -> (usize, &Variable) {
+        // for (i, m) in self.vars.iter().enumerate().rev() {
+        //     if let Some(val) = m.get(id) {
+        //         return Some(val);
+        //     }
+        // }
+
+        let mut var = &Variable::Void;
+
+        if let Some(val) = self.vars.back().unwrap().get(id) {
+            var = val
+        } else {
+            while scope != 0 {
+                if let Some(val) = self.vars.index(scope).get(id) {
+                    var = val;
+                    break;
+                }
+                scope = scope - 1;
+                if scope == 0 {
+                    if let Some(val) = self.vars.index(scope).get(id) {
+                        var = val;
+                        break;
+                    } else {
+                        panic!("variable not in scope")
+                    }
+                }
             }
         }
-        None
+
+        (scope, var)
     }
 }
 
 pub fn start(lex: Vec<LEX>) {
     let mut data: Vars = Vars::new();
     prelude(&mut data);
-    eval(lex, &mut data);
+    eval(lex, &mut data, 1, vec![], vec![]);
 }
 
-pub fn eval(lex: Vec<LEX>, data: &mut Vars) -> Variable {
+pub fn eval(
+    lex: Vec<LEX>,
+    data: &mut Vars,
+    scope: usize,
+    args: Vec<Variable>,
+    args_t_s: Vec<String>,
+) -> Variable {
     let mut t = Variable::Void;
     data.push();
+    for (pos, e) in args_t_s.iter().enumerate() {
+        data.insert(e.to_string(), args[pos].clone());
+    }
     for line in lex {
         match line {
             LEX::DEF(def) => {
-                eval_def(def, data);
+                eval_def(def, data, scope);
             }
             LEX::EXPR(expr) => {
-                eval_expr(expr, data);
+                eval_expr(expr, data, scope);
             }
             LEX::RETURN(expr) => {
-                t = eval_expr(expr, data);
+                t = eval_expr(expr, data, scope);
             }
         }
     }
@@ -72,12 +107,12 @@ pub fn eval(lex: Vec<LEX>, data: &mut Vars) -> Variable {
     t
 }
 
-pub fn eval_def(def: Def, data: &mut Vars) {
-    let val = eval_expr(def.value, data);
+pub fn eval_def(def: Def, data: &mut Vars, scope: usize) {
+    let val = eval_expr(def.value, data, scope);
     data.insert(def.name, val);
 }
 
-pub fn eval_expr(expr: Expr, mut data: &mut Vars) -> Variable {
+pub fn eval_expr(expr: Expr, mut data: &mut Vars, scope: usize) -> Variable {
     let mut v = Variable::Void;
 
     match *expr.node {
@@ -87,7 +122,8 @@ pub fn eval_expr(expr: Expr, mut data: &mut Vars) -> Variable {
         Node::FCCALL { ref args, ref name } => {
             let mut fc = data.clone();
 
-            let fc = fc.get(&name).unwrap();
+            let (fc_scope, fc) = fc.get(&name, scope);
+
             let args_t_s = args
                 .iter()
                 .map(|node| {
@@ -97,19 +133,17 @@ pub fn eval_expr(expr: Expr, mut data: &mut Vars) -> Variable {
                             node: node.clone(),
                         },
                         data,
+                        scope,
                     )
                 })
                 .collect();
-            match &fc {
+
+            match fc {
                 Variable::Rusty(fnc) => {
                     v = fnc(args_t_s);
                 }
                 Variable::Lamda { args, value } => {
-                    for (pos, e) in args.iter().enumerate() {
-                        data.insert(e.to_string(), args_t_s[pos].clone());
-                    }
-
-                    v = eval(value.clone(), data);
+                    v = eval(value.clone(), data, fc_scope, args_t_s, args.clone());
                 }
                 _ => {
                     panic!("not callable");
@@ -117,7 +151,7 @@ pub fn eval_expr(expr: Expr, mut data: &mut Vars) -> Variable {
             }
         }
         Node::CALL(name) => {
-            v = data.get(&name).unwrap().clone();
+            v = data.get(&name, scope).1.clone();
         }
         Node::VOID => v = Variable::Void,
         Node::OP { joint, lhs, rhs } => {
@@ -127,6 +161,7 @@ pub fn eval_expr(expr: Expr, mut data: &mut Vars) -> Variable {
                     node: lhs,
                 },
                 &mut data,
+                scope,
             );
             let rhs = eval_expr(
                 Expr {
@@ -134,6 +169,7 @@ pub fn eval_expr(expr: Expr, mut data: &mut Vars) -> Variable {
                     node: rhs,
                 },
                 &mut data,
+                scope,
             );
             match joint {
                 JOINT::ADD => match lhs {

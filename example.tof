@@ -1,12 +1,9 @@
-
-num1 : 5
-sum : () -> {
-  num2: 4
-  pop()
+main : (fnc2)-> {
+  fnc2()
 }
 
-pop : ()->{
-  stdout(num2)
+fnc : () -> {
+  stdout("hello")
 }
 
-sum()
+main(fnc)

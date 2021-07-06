@@ -32,6 +32,9 @@ enum Subcommand {
 struct Run {
     #[clap(about = "file name of .tof extension , example `tof run filename`")]
     file: String,
+
+    #[clap(long, about = "show generated tokens")]
+    show_tokens: bool,
 }
 
 mod lexer;
@@ -46,10 +49,13 @@ fn main() {
     let matches: Opts = Opts::parse();
 
     match matches.subcommand {
-        Subcommand::Run(Run { file }) => {
+        Subcommand::Run(Run { file, show_tokens }) => {
             let string = fs::read_to_string(format!("{}.tof", file)).expect("file not found");
             let mut lexer = Lexer::new(&string);
             lexer.start_lex();
+            if show_tokens {
+                println!("{:#?}", lexer.lex());
+            }
             start(lexer.lex());
         }
         Subcommand::Play => {
