@@ -1,13 +1,12 @@
 
+num1 : 5
 sum : () -> {
-  num1 : int(stdin("num1 = "))
-  num2 : int(stdin("num2 = "))
-  stdout("result = ", add(num1,num2))
+  num2: 4
+  pop()
 }
 
-
-add : (num1,num2) -> {
-  return num1 + num2
+pop : ()->{
+  stdout(num2)
 }
 
 sum()

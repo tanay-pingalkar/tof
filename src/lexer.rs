@@ -58,7 +58,7 @@ pub struct Lexer<'a> {
 }
 
 lazy_static! {
-    static ref JOINS_REGEX: regex::Regex = Regex::new(r"([\+\-\\/])").unwrap();
+    static ref JOINS_REGEX: regex::Regex = Regex::new(r"([\+\-\\/\*])").unwrap();
     static ref FUNC_REGEX: regex::Regex = Regex::new(r"([\(\)])").unwrap();
     static ref CALL_REGEX: regex::Regex = Regex::new(r"([a-zA-Z])").unwrap();
     static ref INT_REGEX: regex::Regex = Regex::new(r"([0-9])").unwrap();

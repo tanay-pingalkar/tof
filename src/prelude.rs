@@ -19,6 +19,7 @@ pub fn prelude(data: &mut Vars) {
             for var in args {
                 stdio(&var);
             }
+            stdio(&Variable::Str("\n".to_string()));
             Variable::Void
         }),
     );

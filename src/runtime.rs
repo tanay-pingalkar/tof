@@ -54,6 +54,7 @@ pub fn start(lex: Vec<LEX>) {
 
 pub fn eval(lex: Vec<LEX>, data: &mut Vars) -> Variable {
     let mut t = Variable::Void;
+    data.push();
     for line in lex {
         match line {
             LEX::DEF(def) => {
@@ -67,6 +68,7 @@ pub fn eval(lex: Vec<LEX>, data: &mut Vars) -> Variable {
             }
         }
     }
+    data.pop();
     t
 }
 
@@ -149,9 +151,33 @@ pub fn eval_expr(expr: Expr, mut data: &mut Vars) -> Variable {
                     },
                     _ => panic!("you can only add numsbers and string"),
                 },
-                JOINT::SUB => {}
-                JOINT::MULT => {}
-                JOINT::DIV => {}
+                JOINT::SUB => match lhs {
+                    Variable::Int(int) => match rhs {
+                        Variable::Int(int2) => {
+                            v = Variable::Int(int - int2);
+                        }
+                        _ => panic!("you can only subtract numbers"),
+                    },
+                    _ => panic!("you can only subtract numbers"),
+                },
+                JOINT::MULT => match lhs {
+                    Variable::Int(int) => match rhs {
+                        Variable::Int(int2) => {
+                            v = Variable::Int(int * int2);
+                        }
+                        _ => panic!("you can only multiply numbers"),
+                    },
+                    _ => panic!("you can only multiply numbers"),
+                },
+                JOINT::DIV => match lhs {
+                    Variable::Int(int) => match rhs {
+                        Variable::Int(int2) => {
+                            v = Variable::Int(int / int2);
+                        }
+                        _ => panic!("you can only divide numbers"),
+                    },
+                    _ => panic!("you can only divide numbers"),
+                },
             }
         }
     }
