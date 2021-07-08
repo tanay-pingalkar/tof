@@ -9,14 +9,15 @@ a function programming language for real world applications made in rust (in dev
 - run `cargo run -- example`
 
 
+
 ## a basic example
 !!!! this is language is in developement and dont contain too many features.
 ```
 // this is a sum example
 sum : () -> {
-  num1 : int(stdin("num1 = "))
-  num2 : int(stdin("num2 = "))
-  stdout("result = ", num1 + num2)
+  num1 : int(scan("num1 = "))
+  num2 : int(scan("num2 = "))
+  print("result = ", num1 + num2)
 }
 
 sum()
