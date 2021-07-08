@@ -14,7 +14,7 @@ pub fn stdio(var: &Variable) {
 
 pub fn prelude(data: &mut Vars) {
     data.insert(
-        "stdout".to_string(),
+        "print".to_string(),
         Variable::Rusty(|args| {
             for var in args {
                 stdio(&var);
@@ -25,7 +25,7 @@ pub fn prelude(data: &mut Vars) {
     );
 
     data.insert(
-        "stdin".to_string(),
+        "scan".to_string(),
         Variable::Rusty(|args| {
             let mut string = String::new();
             stdio(&args[0]);
@@ -45,6 +45,17 @@ pub fn prelude(data: &mut Vars) {
                 _ => panic!("cannot parse"),
             };
             Variable::Int(int.clone())
+        }),
+    );
+    data.insert(
+        "len".to_string(),
+        Variable::Rusty(|args| {
+            let len = match args[0].clone() {
+                Variable::Str(str) => str,
+                _ => panic!("only give len of string"),
+            };
+            let len = len.len();
+            Variable::Int(len as i32)
         }),
     );
 }

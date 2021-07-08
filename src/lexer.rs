@@ -4,6 +4,7 @@ use regex::Regex;
 pub enum LEX {
     DEF(Def),
     EXPR(Expr),
+    MATCH,
     RETURN(Expr),
 }
 
@@ -20,6 +21,7 @@ pub enum Node {
         name: String,
     },
     CALL(String),
+    #[allow(dead_code)]
     VOID,
     OP {
         joint: JOINT,
@@ -79,6 +81,7 @@ impl<'a> Lexer<'a> {
     pub fn start_lex(&mut self) {
         if self.coverage != self.lex_vec.len() {
             let line = self.lex_vec[self.coverage];
+
             if line.trim() == "" || line.trim().starts_with("//") {
             } else if line.contains(":") {
                 let (name, value_str) = line.split_once(":").unwrap();
@@ -95,31 +98,39 @@ impl<'a> Lexer<'a> {
                 } else {
                     self.coverage = self.coverage + 1;
                     let mut value: Vec<LEX> = Vec::new();
-                    let mut args = value_str
-                        .split_once("(")
-                        .unwrap()
-                        .1
-                        .split_once(")")
-                        .unwrap()
-                        .0
-                        .split(",")
-                        .map(|s| s.trim().to_string())
-                        .collect::<Vec<String>>();
+                    if value_str.trim().starts_with("if") {
+                        self.matcher(&mut value);
+                    } else {
+                        let mut args = value_str
+                            .split_once("(")
+                            .unwrap()
+                            .1
+                            .split_once(")")
+                            .unwrap()
+                            .0
+                            .split(",")
+                            .map(|s| s.trim().to_string())
+                            .collect::<Vec<String>>();
 
-                    if args[0].trim() == "" {
-                        args.pop();
-                    }
+                        if args[0].trim() == "" {
+                            args.pop();
+                        }
 
-                    self.deep_lex(&mut value);
-                    self.lex.push(LEX::DEF(Def {
-                        name: name.trim().to_string(),
-                        line_number: self.coverage,
-                        value: Expr {
+                        self.deep_lex(&mut value);
+                        self.lex.push(LEX::DEF(Def {
+                            name: name.trim().to_string(),
                             line_number: self.coverage,
-                            node: Box::new(Node::Lamda { args, value }),
-                        },
-                    }));
+                            value: Expr {
+                                line_number: self.coverage,
+                                node: Box::new(Node::Lamda { args, value }),
+                            },
+                        }));
+                    }
                 }
+            } else if line.trim().starts_with("if") {
+                self.coverage = self.coverage + 1;
+                let mut value: Vec<LEX> = Vec::new();
+                self.matcher(&mut value);
             } else if line.trim().starts_with("return") {
                 panic!(
                     "cannot return on top level ,line number:{}",
@@ -133,6 +144,12 @@ impl<'a> Lexer<'a> {
             }
             self.coverage = self.coverage + 1;
             self.start_lex();
+        }
+    }
+
+    pub fn matcher(&mut self, mut sub_lex: &mut Vec<LEX>) {
+        if !self.lex_vec[self.coverage].contains("}") {
+            self.coverage = self.coverage + 1;
         }
     }
 
@@ -199,7 +216,7 @@ impl<'a> Lexer<'a> {
 
     pub fn equation_resolver(&self, string: &'a str) -> Box<Node> {
         let mut splited: Vec<&str> = string.split("").collect::<Vec<&str>>();
-        let mut node = Box::new(Node::VOID);
+        let mut node;
 
         let mut foo = 0;
         let mut bracks = 0;

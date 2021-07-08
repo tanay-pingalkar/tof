@@ -1,9 +1,21 @@
-main : (fnc2)-> {
-  fnc2()
+string_concat : () -> {
+  name : scan("name = ")
+  surname : scan("surname = ")
+  print("hi " + name + " " + surname)
 }
 
-fnc : () -> {
-  stdout("hello")
+sum : () -> {
+  num1 : scan("num1 = ")
+  num1 : scan("num2 = ")
+  print(num1 "+" num2)
+}
+  
+print_len : (arg@string){
+  print(len(arg))
+  return len(arg)
 }
 
-main(fnc)
+a : 2
+if (a < 2) {
+
+}

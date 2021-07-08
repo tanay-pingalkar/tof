@@ -1,14 +1,16 @@
 #[macro_use]
 extern crate lazy_static;
 
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
+
 use clap::{AppSettings, Clap};
 use std::fs;
-use std::io::{stdin, stdout, Write};
 
 #[derive(Clap, Debug)]
 #[clap(
     version = "1.0",
-    author = "author - Tanay D. Pingalkar <tanaydpingalkar@Gmail.com>",
+    author = "author - Tanay D. Pingalkar <tanaydpingalkar@gmail.com>",
     about = "a functional programming language"
 )]
 #[clap(setting = AppSettings::ColoredHelp)]
@@ -33,7 +35,7 @@ struct Run {
     #[clap(about = "file name of .tof extension , example `tof run filename`")]
     file: String,
 
-    #[clap(long, about = "show generated tokens")]
+    #[clap(long, about = "show generated tokens", short)]
     show_tokens: bool,
 }
 
@@ -43,7 +45,7 @@ mod runtime;
 
 use crate::lexer::Lexer;
 
-use crate::runtime::start;
+use crate::runtime::{eval, start};
 
 fn main() {
     let matches: Opts = Opts::parse();
@@ -59,18 +61,33 @@ fn main() {
             start(lexer.lex());
         }
         Subcommand::Play => {
+            let mut rl = Editor::<()>::new();
+            let mut data = start(vec![]);
             println!("welcome to interactive mode \npress : Ctrl-C to exit");
             loop {
-                let mut string = String::new();
-                print!("-> ");
-                stdout().flush().unwrap();
+                let readline = rl.readline("-> ");
+                match readline {
+                    Ok(line) => {
+                        rl.add_history_entry(line.as_str());
 
-                stdin().read_line(&mut string).unwrap();
+                        let mut lexer = Lexer::new(&line);
+                        lexer.start_lex();
 
-                let mut lexer = Lexer::new(&string);
-                lexer.start_lex();
-
-                start(lexer.lex());
+                        eval(lexer.lex(), &mut data, 1, vec![], vec![]);
+                    }
+                    Err(ReadlineError::Interrupted) => {
+                        println!("^C");
+                        break;
+                    }
+                    Err(ReadlineError::Eof) => {
+                        println!("^D");
+                        break;
+                    }
+                    Err(err) => {
+                        println!("Error: {:?}", err);
+                        break;
+                    }
+                }
             }
         }
     }

@@ -2,7 +2,6 @@ use crate::lexer::*;
 use crate::prelude::*;
 use std::collections::{BTreeMap, VecDeque};
 use std::ops::Index;
-use std::ops::IndexMut;
 
 #[derive(Debug, Clone)]
 pub enum Variable {
@@ -72,10 +71,12 @@ impl Vars {
     }
 }
 
-pub fn start(lex: Vec<LEX>) {
+pub fn start(lex: Vec<LEX>) -> Vars {
     let mut data: Vars = Vars::new();
     prelude(&mut data);
     eval(lex, &mut data, 1, vec![], vec![]);
+
+    data
 }
 
 pub fn eval(
@@ -101,6 +102,7 @@ pub fn eval(
             LEX::RETURN(expr) => {
                 t = eval_expr(expr, data, scope);
             }
+            LEX::MATCH => {}
         }
     }
     data.pop();
@@ -113,7 +115,7 @@ pub fn eval_def(def: Def, data: &mut Vars, scope: usize) {
 }
 
 pub fn eval_expr(expr: Expr, mut data: &mut Vars, scope: usize) -> Variable {
-    let mut v = Variable::Void;
+    let v;
 
     match *expr.node {
         Node::Int(int) => v = Variable::Int(int),
