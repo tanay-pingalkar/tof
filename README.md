@@ -11,7 +11,7 @@ a function programming language for real world applications made in rust (in dev
 
 
 ## a basic example
-!!!! this is language is in developement and dont contain too many features.
+!!!! this language is in developement and dont contain too many features.
 ```
 // this is a sum example
 sum : _ -> {
