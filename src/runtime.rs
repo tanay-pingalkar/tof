@@ -3,12 +3,13 @@ use crate::prelude::*;
 use std::collections::{BTreeMap, VecDeque};
 use std::ops::Index;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Variable {
     Lamda { args: Vec<String>, value: Vec<LEX> },
     Rusty(fn(args: Vec<Variable>) -> Variable),
-    Int(i32),
+    Int(f64),
     Str(String),
+    Bool(bool),
     Void,
 }
 
@@ -39,12 +40,6 @@ impl Vars {
     }
 
     pub fn get(&mut self, id: &str, mut scope: usize) -> (usize, &Variable) {
-        // for (i, m) in self.vars.iter().enumerate().rev() {
-        //     if let Some(val) = m.get(id) {
-        //         return Some(val);
-        //     }
-        // }
-
         let mut var = &Variable::Void;
 
         if let Some(val) = self.vars.back().unwrap().get(id) {
@@ -61,6 +56,7 @@ impl Vars {
                         var = val;
                         break;
                     } else {
+                        println!("{}", id);
                         panic!("variable not in scope")
                     }
                 }
@@ -71,153 +67,177 @@ impl Vars {
     }
 }
 
-pub fn start(lex: Vec<LEX>) -> Vars {
-    let mut data: Vars = Vars::new();
-    prelude(&mut data);
-    eval(lex, &mut data, 1, vec![], vec![]);
-
-    data
+pub struct Runtime {
+    data: Vars,
 }
 
-pub fn eval(
-    lex: Vec<LEX>,
-    data: &mut Vars,
-    scope: usize,
-    args: Vec<Variable>,
-    args_t_s: Vec<String>,
-) -> Variable {
-    let mut t = Variable::Void;
-    data.push();
-    for (pos, e) in args_t_s.iter().enumerate() {
-        data.insert(e.to_string(), args[pos].clone());
+impl Runtime {
+    pub fn new() -> Runtime {
+        let mut data: Vars = Vars::new();
+        prelude(&mut data);
+        Runtime { data }
     }
-    for line in lex {
-        match line {
-            LEX::DEF(def) => {
-                eval_def(def, data, scope);
-            }
-            LEX::EXPR(expr) => {
-                eval_expr(expr, data, scope);
-            }
-            LEX::RETURN(expr) => {
-                t = eval_expr(expr, data, scope);
-            }
-            LEX::MATCH => {}
+
+    // pub fn start(lex: Vec<LEX>) -> Vars {
+    //     let mut data: Vars = Vars::new();
+    //     prelude(&mut data);
+    //     eval(lex, &mut data, 1, vec![], vec![]);
+
+    //     data
+    // }
+
+    pub fn eval(
+        &mut self,
+        lex: Vec<LEX>,
+        scope: usize,
+        args: Vec<Variable>,
+        args_t_s: Vec<String>,
+    ) -> Variable {
+        let mut t = Variable::Void;
+        self.data.push();
+        for (pos, e) in args_t_s.iter().enumerate() {
+            self.data.insert(e.to_string(), args[pos].clone());
         }
+        for line in lex {
+            match line {
+                LEX::DEF(_ln, def) => {
+                    self.eval_def(def, scope);
+                }
+                LEX::EXPR(_ln, expr) => {
+                    self.eval_expr(expr, scope);
+                }
+                LEX::RETURN(_ln, expr) => {
+                    t = self.eval_expr(expr, scope);
+                }
+            }
+        }
+        self.data.pop();
+        t
     }
-    data.pop();
-    t
-}
 
-pub fn eval_def(def: Def, data: &mut Vars, scope: usize) {
-    let val = eval_expr(def.value, data, scope);
-    data.insert(def.name, val);
-}
+    pub fn eval_def(&mut self, def: Def, scope: usize) {
+        let val = self.eval_expr(def.value, scope);
+        self.data.insert(def.name, val);
+    }
 
-pub fn eval_expr(expr: Expr, mut data: &mut Vars, scope: usize) -> Variable {
-    let v;
+    pub fn eval_expr(&mut self, expr: Expr, scope: usize) -> Variable {
+        let mut v = Variable::Void;
 
-    match *expr.node {
-        Node::Int(int) => v = Variable::Int(int),
-        Node::Str(string) => v = Variable::Str(string),
-        Node::Lamda { args, value } => v = Variable::Lamda { args, value },
-        Node::FCCALL { ref args, ref name } => {
-            let mut fc = data.clone();
+        match *expr {
+            NODE::INT(int) => v = Variable::Int(int),
+            NODE::STR(string) => v = Variable::Str(string),
+            NODE::LAMDA(Lamda { args, value }) => v = Variable::Lamda { args, value },
+            NODE::FCCALL(FcCall { args, name }) => {
+                let mut fc = self.data.clone();
 
-            let (fc_scope, fc) = fc.get(&name, scope);
+                let (fc_scope, fc) = fc.get(&name, scope);
 
-            let args_t_s = args
-                .iter()
-                .map(|node| {
-                    eval_expr(
-                        Expr {
-                            line_number: expr.line_number.clone(),
-                            node: node.clone(),
+                let args_t_s = args
+                    .iter()
+                    .map(|node| self.eval_expr(node.clone(), scope))
+                    .collect();
+
+                match fc {
+                    Variable::Rusty(fnc) => {
+                        v = fnc(args_t_s);
+                    }
+                    Variable::Lamda { args, value } => {
+                        v = self.eval(value.clone(), fc_scope, args_t_s, args.clone());
+                    }
+                    _ => {
+                        panic!("not callable");
+                    }
+                }
+            }
+            NODE::CALL(name) => {
+                v = self.data.get(&name, scope).1.clone();
+            }
+            NODE::VOID => v = Variable::Void,
+            NODE::OP { joint, lhs, rhs } => {
+                let lhs = self.eval_expr(lhs, scope);
+                let rhs = self.eval_expr(rhs, scope);
+                match joint {
+                    JOINT::ADD => match lhs {
+                        Variable::Int(int) => match rhs {
+                            Variable::Int(int2) => {
+                                v = Variable::Int(int + int2);
+                            }
+                            _ => panic!("you can only add numbers and string"),
                         },
-                        data,
-                        scope,
-                    )
-                })
-                .collect();
-
-            match fc {
-                Variable::Rusty(fnc) => {
-                    v = fnc(args_t_s);
-                }
-                Variable::Lamda { args, value } => {
-                    v = eval(value.clone(), data, fc_scope, args_t_s, args.clone());
-                }
-                _ => {
-                    panic!("not callable");
-                }
-            }
-        }
-        Node::CALL(name) => {
-            v = data.get(&name, scope).1.clone();
-        }
-        Node::VOID => v = Variable::Void,
-        Node::OP { joint, lhs, rhs } => {
-            let lhs = eval_expr(
-                Expr {
-                    line_number: expr.line_number,
-                    node: lhs,
-                },
-                &mut data,
-                scope,
-            );
-            let rhs = eval_expr(
-                Expr {
-                    line_number: expr.line_number,
-                    node: rhs,
-                },
-                &mut data,
-                scope,
-            );
-            match joint {
-                JOINT::ADD => match lhs {
-                    Variable::Int(int) => match rhs {
-                        Variable::Int(int2) => {
-                            v = Variable::Int(int + int2);
-                        }
-                        _ => panic!("you can only add numbers and string"),
+                        Variable::Str(string) => match rhs {
+                            Variable::Str(string2) => {
+                                v = Variable::Str(string + &string2);
+                            }
+                            _ => panic!("you can only add numbers and string"),
+                        },
+                        _ => panic!("you can only add numsbers and string"),
                     },
-                    Variable::Str(string) => match rhs {
-                        Variable::Str(string2) => {
-                            v = Variable::Str(string + &string2);
-                        }
-                        _ => panic!("you can only add numbers and string"),
-                    },
-                    _ => panic!("you can only add numsbers and string"),
-                },
-                JOINT::SUB => match lhs {
-                    Variable::Int(int) => match rhs {
-                        Variable::Int(int2) => {
-                            v = Variable::Int(int - int2);
-                        }
+                    JOINT::SUB => match lhs {
+                        Variable::Int(int) => match rhs {
+                            Variable::Int(int2) => {
+                                v = Variable::Int(int - int2);
+                            }
+                            _ => panic!("you can only subtract numbers"),
+                        },
                         _ => panic!("you can only subtract numbers"),
                     },
-                    _ => panic!("you can only subtract numbers"),
-                },
-                JOINT::MULT => match lhs {
-                    Variable::Int(int) => match rhs {
-                        Variable::Int(int2) => {
-                            v = Variable::Int(int * int2);
-                        }
+                    JOINT::MULT => match lhs {
+                        Variable::Int(int) => match rhs {
+                            Variable::Int(int2) => {
+                                v = Variable::Int(int * int2);
+                            }
+                            _ => panic!("you can only multiply numbers"),
+                        },
                         _ => panic!("you can only multiply numbers"),
                     },
-                    _ => panic!("you can only multiply numbers"),
-                },
-                JOINT::DIV => match lhs {
-                    Variable::Int(int) => match rhs {
-                        Variable::Int(int2) => {
-                            v = Variable::Int(int / int2);
-                        }
+                    JOINT::DIV => match lhs {
+                        Variable::Int(int) => match rhs {
+                            Variable::Int(int2) => {
+                                v = Variable::Int(int / int2);
+                            }
+                            _ => panic!("you can only divide numbers"),
+                        },
                         _ => panic!("you can only divide numbers"),
                     },
-                    _ => panic!("you can only divide numbers"),
-                },
+                    JOINT::EQU => match lhs {
+                        Variable::Int(int) => match rhs {
+                            Variable::Int(int2) => {
+                                v = Variable::Bool(int == int2);
+                            }
+                            _ => panic!("you can only compare string and number"),
+                        },
+                        Variable::Str(string) => match rhs {
+                            Variable::Str(string2) => {
+                                v = Variable::Bool(string == string2);
+                            }
+                            _ => panic!("you can only add numbers and string"),
+                        },
+                        _ => panic!("you can only compare string and number"),
+                    },
+                    JOINT::GREAT => todo!(),
+                    JOINT::LESS => todo!(),
+                    JOINT::NOT => todo!(),
+                }
+            }
+
+            NODE::MATCH(mat) => {
+                let mut i = 0;
+                loop {
+                    let m = mat[i].clone();
+                    if self.eval_expr(m.cond, scope) == Variable::Bool(true) {
+                        self.eval(m.block, scope, vec![], vec![]);
+                        break;
+                    }
+                    i = i + 1;
+                    if mat.len() == i {
+                        break;
+                    }
+                }
+            }
+            NODE::BOOL(bool) => {
+                v = Variable::Bool(bool);
             }
         }
+        v
     }
-    v
 }

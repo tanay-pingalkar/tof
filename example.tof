@@ -1,21 +1,3 @@
-string_concat : () -> {
-  name : scan("name = ")
-  surname : scan("surname = ")
-  print("hi " + name + " " + surname)
-}
+add : x y z -> x + z + y
 
-sum : () -> {
-  num1 : scan("num1 = ")
-  num1 : scan("num2 = ")
-  print(num1 "+" num2)
-}
-  
-print_len : (arg@string){
-  print(len(arg))
-  return len(arg)
-}
-
-a : 2
-if (a < 2) {
-
-}
+print (add 2 3 4)
