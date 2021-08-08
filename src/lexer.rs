@@ -147,6 +147,9 @@ impl Lexer {
     }
 
     pub fn args(&mut self, value: &str) -> Vec<Box<NODE>> {
+        if value.trim() == "_" {
+            return Vec::new();
+        }
         let splited = value.trim().split("").collect::<Vec<&str>>();
         let mut args = Vec::new();
         let mut arg = Vec::new();
@@ -209,15 +212,17 @@ impl Lexer {
                 value = lex.lex();
             }
 
-            n = Box::new(NODE::LAMDA(Lamda {
-                args: args
-                    .split_whitespace()
-                    .collect::<Vec<&str>>()
-                    .iter()
-                    .map(|v| v.to_string())
-                    .collect(),
-                value,
-            }))
+            let mut args: Vec<String> = args
+                .split_whitespace()
+                .collect::<Vec<&str>>()
+                .iter()
+                .map(|v| v.trim().to_string())
+                .collect();
+
+            if args[0] == "_" {
+                args = Vec::new()
+            }
+            n = Box::new(NODE::LAMDA(Lamda { args, value }))
         } else if FUNC_REGEX.is_match(&part) {
             let splitted = part.split_whitespace().collect::<Vec<&str>>();
             let name = splitted[0];

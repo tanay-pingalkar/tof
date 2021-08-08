@@ -1,3 +1,17 @@
-add : x y z -> x + z + y
+sum : _ -> {
+  num1 : int (scan "num1 = " )
+  num2 : int (scan "num2 = ")
+  print "result = " (num1 + num2)
+}
 
-print (add 2 3 4)
+sum _
+
+
+
+
+lamdatest : a_lamda -> {
+  a_lamda _
+}
+
+
+lamdatest sum
