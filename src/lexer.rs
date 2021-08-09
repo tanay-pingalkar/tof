@@ -14,8 +14,22 @@ pub enum LEX {
 pub struct Match {
     pub cond: Box<NODE>,
     pub block: Vec<LEX>,
+    pub next: Option<Box<Match>>,
+    pub criteria: Option<MatchesCriteria>,
 }
 
+// #[derive(Debug, Clone, PartialEq)]
+// pub struct Matches {
+//     current: Match,
+//     next: Match,
+//     criteria : MatchesCriteria
+// }
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum MatchesCriteria {
+    ELIF,
+    ANDIF,
+}
 #[derive(Debug, Clone, PartialEq)]
 pub struct Lamda {
     pub args: Vec<String>,
@@ -33,7 +47,7 @@ pub enum NODE {
     INT(f64),
     STR(String),
     LAMDA(Lamda),
-    MATCH(Vec<Match>),
+    MATCH(Box<Match>),
     FCCALL(FcCall),
     CALL(String),
     VOID,
@@ -207,9 +221,9 @@ impl Lexer {
                 lex.start();
                 value = lex.lex();
             } else {
-                let mut lex = Lexer::new(format!("~{}", steps.to_string()));
-                lex.start();
-                value = lex.lex();
+                let lex = vec![LEX::RETURN(self.coverage, self.expression(steps))];
+
+                value = lex;
             }
 
             let mut args: Vec<String> = args
@@ -268,8 +282,13 @@ impl Lexer {
 
         let mut parts = Vec::new();
         let mut is_closed = IsClosed::new();
+        let mut cond: Option<String> = None;
         loop {
-            if JOINS_REGEX.is_match(&splited[i]) && is_closed.is() && !is_closed.in_arrow {
+            if JOINS_REGEX.is_match(&splited[i])
+                && is_closed.is()
+                && !is_closed.in_arrow
+                && !is_closed.in_cond
+            {
                 let part = parts.join("");
 
                 if splited[i] == "-" && splited[i + 1] == ">" {
@@ -289,14 +308,53 @@ impl Lexer {
                 }
             }
 
+            if splited[i] == "|" && splited[i + 1] == "|" && is_closed.is() && !is_closed.in_arrow {
+                node = self.matche(
+                    &parts.join(""),
+                    cond,
+                    &splited
+                        .splice(i + 2..splited.len() - 1, vec![])
+                        .collect::<Vec<String>>()
+                        .join(""),
+                );
+                break;
+            }
+
             is_closed.check(&splited[i]);
 
-            parts.push(splited[i].clone());
+            if splited[i] == "?" && !is_closed.in_arrow {
+                is_closed.in_cond = true;
+                cond = Some(parts.join("").to_string());
+                parts = Vec::new();
+            } else {
+                parts.push(splited[i].clone());
+            }
             i = i + 1;
 
             if splited.len() == i && is_closed.is() {
-                node = self.node(&parts.join(""));
-                break;
+                if is_closed.in_cond {
+                    let nl = self.lex_vec[self.coverage + 1].clone();
+                    if nl.trim().starts_with("||") {
+                        self.coverage = self.coverage + 1;
+                        splited = [
+                            splited,
+                            vec!["\n".to_string()],
+                            nl.trim()
+                                .split("")
+                                .collect::<Vec<&str>>()
+                                .iter()
+                                .map(|v| v.to_string())
+                                .collect(),
+                        ]
+                        .concat();
+                    } else {
+                        node = self.matche(&parts.join(""), cond, "");
+                        break;
+                    }
+                } else {
+                    node = self.node(&parts.join(""));
+                    break;
+                }
             } else if splited.len() == i {
                 self.coverage = self.coverage + 1;
                 let nl = self.lex_vec[self.coverage].clone();
@@ -315,6 +373,59 @@ impl Lexer {
         }
 
         node
+    }
+
+    pub fn matche(&mut self, block: &str, cond: Option<String>, nextS: &str) -> Expr {
+        let mut block = Lexer::new(format!("~{}", block.to_string()));
+        block.start();
+        let block = block.lex();
+
+        let mut nextS = nextS.trim().to_string();
+
+        if nextS.starts_with("{") && nextS.ends_with("}") {
+            nextS = format!("_->{}", nextS);
+        }
+
+        let lex;
+        if nextS != "" {
+            lex = self.expression(&nextS);
+        } else {
+            lex = Box::new(NODE::VOID);
+        }
+
+        let next;
+
+        match *lex {
+            NODE::MATCH(m) => {
+                next = Some(Box::new(Match {
+                    cond: m.cond,
+                    block: m.block,
+                    next: m.next,
+                    criteria: Some(MatchesCriteria::ELIF),
+                }));
+            }
+            NODE::VOID => next = None,
+            _ => {
+                next = Some(Box::new(Match {
+                    cond: Box::new(NODE::BOOL(true)),
+                    block: vec![LEX::RETURN(self.coverage, lex)],
+                    next: None,
+                    criteria: Some(MatchesCriteria::ELIF),
+                }));
+            }
+        }
+
+        Box::new(NODE::MATCH(Box::new(Match {
+            cond: self.expression(&match cond {
+                Some(s) => s,
+                None => {
+                    panic!("please specify condition {}", self.coverage);
+                }
+            }),
+            block,
+            next,
+            criteria: Some(MatchesCriteria::ELIF),
+        })))
     }
 
     pub fn lex(&self) -> Vec<LEX> {

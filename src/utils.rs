@@ -1,5 +1,6 @@
 pub struct IsClosed {
     pub in_arrow: bool,
+    pub in_cond: bool,
     recent: Vec<TOCLOSE>,
 }
 
@@ -15,6 +16,7 @@ impl IsClosed {
         IsClosed {
             recent: Vec::new(),
             in_arrow: false,
+            in_cond: false,
         }
     }
 

@@ -56,14 +56,17 @@ impl Vars {
                         var = val;
                         break;
                     } else {
-                        println!("{}", id);
-                        panic!("variable not in scope")
+                        panic!("variable not in scope : {} {}", id, scope);
                     }
                 }
             }
         }
 
         (scope, var)
+    }
+
+    pub fn scopes_number(&self) -> usize {
+        self.vars.len()
     }
 }
 
@@ -220,28 +223,42 @@ impl Runtime {
                     },
                     JOINT::GREAT => todo!(),
                     JOINT::LESS => todo!(),
-                    JOINT::NOT => todo!(),
+                    JOINT::NOT => match lhs {
+                        Variable::Int(int) => match rhs {
+                            Variable::Int(int2) => {
+                                v = Variable::Bool(int != int2);
+                            }
+                            _ => panic!("you can only compare string and number"),
+                        },
+                        Variable::Str(string) => match rhs {
+                            Variable::Str(string2) => {
+                                v = Variable::Bool(string != string2);
+                            }
+                            _ => panic!("you can only add numbers and string"),
+                        },
+                        _ => panic!("you can only compare string and number"),
+                    },
                 }
             }
 
             NODE::MATCH(mat) => {
-                let mut i = 0;
-                loop {
-                    let m = mat[i].clone();
-                    if self.eval_expr(m.cond, scope) == Variable::Bool(true) {
-                        self.eval(m.block, scope, vec![], vec![], true);
-                        break;
-                    }
-                    i = i + 1;
-                    if mat.len() == i {
-                        break;
-                    }
-                }
+                v = self.eval_match(mat, scope);
             }
             NODE::BOOL(bool) => {
                 v = Variable::Bool(bool);
             }
         }
         v
+    }
+
+    pub fn eval_match(&mut self, m: Box<Match>, scope: usize) -> Variable {
+        if self.eval_expr(m.cond, scope) == Variable::Bool(true) {
+            self.eval(m.block, self.data.scopes_number(), vec![], vec![], true)
+        } else {
+            match m.next {
+                Some(m) => self.eval_match(m, scope),
+                None => Variable::Void,
+            }
+        }
     }
 }

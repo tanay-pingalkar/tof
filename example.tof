@@ -1,7 +1,21 @@
+
+add : num1 num2 -> num1 + num2
+
+sub : num1 num2 -> num1 - num2
+
+mult : num1 num2 -> num1 * num2
+
+div : num1 num2 -> num1 / num2
+
+
 sum : _ -> {
   num1 : int (scan "num1 = " )
   num2 : int (scan "num2 = ")
-  print "result = " (num1 + num2)
+  print "result = " (add num1 num2)
 }
 
-sum _
+hello_world : string -> print string
+
+
+factorial  : a -> (a = 1) ? 1 || a + fc (a-1) 
+
