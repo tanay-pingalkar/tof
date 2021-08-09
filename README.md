@@ -4,6 +4,8 @@
 </div>
 <div align="center">
   <h3>tof is a pure functional language made in rust (🚧 in development)</h3>
+  <img src="https://img.shields.io/github/stars/tanay-pingalkar/tof"></img>
+  <img src="https://img.shields.io/github/license/tanay-pingalkar/tof?label=license"></img>
 </div>
 
 ## install
