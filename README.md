@@ -1,17 +1,20 @@
-# tof
-a function programming language for real world applications made in rust (in development)
 
+<div align="center">
+<img src="https://github.com/tanay-pingalkar/tof/blob/main/logo.png"><img>
+</div>
+<div align="center">
+  <h3>tof is a pure functional language made in rust (🚧 in development)</h3>
+</div>
 
 ## install
 - fork the repo
-- `git clone`https://github.com/[your_username]/tof.git
+- `git clone https://github.com/[your_username]/tof.git`
 - run `cargo install`
 - run `cargo run -- example`
 
 
 
 ## a basic example
-!!!! this language is in developement and dont contain too many features.
 ```
 // this is a sum example
 sum : _ -> {
@@ -22,3 +25,9 @@ sum : _ -> {
 
 sum _
 ```
+
+## cli options
+run `cargo install` to install tof so you can call tof using `tof` name <br>
+- `tof run filename` 
+- `tof play` 
+- `tof run filename --show-tokens` 
