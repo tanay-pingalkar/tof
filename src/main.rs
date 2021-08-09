@@ -1,8 +1,8 @@
 #[macro_use]
 extern crate lazy_static;
 
-// use rustyline::error::ReadlineError;
-// use rustyline::Editor;
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
 
 use clap::{AppSettings, Clap};
 use std::fs;
@@ -48,8 +48,6 @@ use runtime::Runtime;
 mod utils;
 use crate::lexer::Lexer;
 
-// use crate::runtime::{eval, start};
-
 fn main() {
     let matches: Opts = Opts::parse();
 
@@ -63,38 +61,42 @@ fn main() {
             }
             let mut runtime = Runtime::new();
 
-            runtime.eval(lexer.lex(), 1, vec![], vec![]);
+            runtime.eval(lexer.lex(), 1, vec![], vec![], true);
         }
-        // Subcommand::Play => {
-        //     let mut rl = Editor::<()>::new();
-        //     let mut data = start(vec![]);
-        //     println!("welcome to interactive mode \npress : Ctrl-C to exit");
-        //     loop {
-        //         let readline = rl.readline("-> ");
-        //         match readline {
-        //             Ok(line) => {
-        //                 rl.add_history_entry(line.as_str());
+        Subcommand::Play => {
+            let mut rl = Editor::<()>::new();
 
-        //                 let mut lexer = Lexer::new(&line);
-        //                 lexer.start_lex();
+            println!("welcome to interactive mode \npress : Ctrl-C to exit");
+            let mut runtime = Runtime::new();
+            let mut i: usize = 1;
+            loop {
+                let readline = rl.readline("-> ");
+                match readline {
+                    Ok(line) => {
+                        rl.add_history_entry(line.as_str());
 
-        //                 eval(lexer.lex(), &mut data, 1, vec![], vec![]);
-        //             }
-        //             Err(ReadlineError::Interrupted) => {
-        //                 println!("^C");
-        //                 break;
-        //             }
-        //             Err(ReadlineError::Eof) => {
-        //                 println!("^D");
-        //                 break;
-        //             }
-        //             Err(err) => {
-        //                 println!("Error: {:?}", err);
-        //                 break;
-        //             }
-        //         }
-        //     }
-        // }
+                        let mut lexer = Lexer::new(line.to_string());
+                        lexer.start();
+
+                        runtime.eval(lexer.lex(), i, vec![], vec![], false);
+
+                        i = i + 1;
+                    }
+                    Err(ReadlineError::Interrupted) => {
+                        println!("^C");
+                        break;
+                    }
+                    Err(ReadlineError::Eof) => {
+                        println!("^D");
+                        break;
+                    }
+                    Err(err) => {
+                        println!("Error: {:?}", err);
+                        break;
+                    }
+                }
+            }
+        }
         _ => {}
     }
 }

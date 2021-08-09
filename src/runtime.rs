@@ -92,6 +92,7 @@ impl Runtime {
         scope: usize,
         args: Vec<Variable>,
         args_t_s: Vec<String>,
+        drop: bool,
     ) -> Variable {
         let mut t = Variable::Void;
         self.data.push();
@@ -111,7 +112,10 @@ impl Runtime {
                 }
             }
         }
-        self.data.pop();
+        if drop {
+            self.data.pop();
+        }
+
         t
     }
 
@@ -142,7 +146,7 @@ impl Runtime {
                         v = fnc(args_t_s);
                     }
                     Variable::Lamda { args, value } => {
-                        v = self.eval(value.clone(), fc_scope, args_t_s, args.clone());
+                        v = self.eval(value.clone(), fc_scope, args_t_s, args.clone(), true);
                     }
                     _ => {
                         panic!("not callable");
@@ -225,7 +229,7 @@ impl Runtime {
                 loop {
                     let m = mat[i].clone();
                     if self.eval_expr(m.cond, scope) == Variable::Bool(true) {
-                        self.eval(m.block, scope, vec![], vec![]);
+                        self.eval(m.block, scope, vec![], vec![], true);
                         break;
                     }
                     i = i + 1;

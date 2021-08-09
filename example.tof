@@ -5,13 +5,3 @@ sum : _ -> {
 }
 
 sum _
-
-
-
-
-lamdatest : a_lamda -> {
-  a_lamda _
-}
-
-
-lamdatest sum

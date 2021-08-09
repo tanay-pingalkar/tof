@@ -71,4 +71,17 @@ pub fn prelude(data: &mut Vars) {
             _ => panic!("only numbers please"),
         }),
     );
+    data.insert(
+        "quit".to_string(),
+        Variable::Rusty(|args| {
+            if args.len() == 1 {
+                match args[0] {
+                    Variable::Int(i) => std::process::exit(i as i32),
+                    _ => panic!("only numbers please"),
+                }
+            } else {
+                std::process::exit(100)
+            }
+        }),
+    );
 }
