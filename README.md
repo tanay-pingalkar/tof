@@ -12,7 +12,7 @@
 - fork the repo
 - `git clone https://github.com/[your_username]/tof.git`
 - run `cargo install`
-- run `cargo run -- example`
+- run `cargo run -- run example`
 
 
 
