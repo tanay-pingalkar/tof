@@ -221,8 +221,28 @@ impl Runtime {
                         },
                         _ => panic!("you can only compare string and number"),
                     },
-                    JOINT::GREAT => todo!(),
-                    JOINT::LESS => todo!(),
+                    JOINT::GREAT => match lhs {
+                        Variable::Int(int) => match rhs {
+                            Variable::Int(int2) => {
+                                v = Variable::Bool(int > int2);
+                            }
+                            _ => panic!("you can only compare string and number"),
+                        },
+                        _ => {
+                            panic!("only numbers are allowed");
+                        }
+                    },
+                    JOINT::LESS => match lhs {
+                        Variable::Int(int) => match rhs {
+                            Variable::Int(int2) => {
+                                v = Variable::Bool(int < int2);
+                            }
+                            _ => panic!("you can only compare string and number"),
+                        },
+                        _ => {
+                            panic!("only numbers are allowed");
+                        }
+                    },
                     JOINT::NOT => match lhs {
                         Variable::Int(int) => match rhs {
                             Variable::Int(int2) => {

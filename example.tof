@@ -17,14 +17,25 @@ sum : _ -> {
 hello_world : string -> print string
 
 
-factorial  : a -> (a = 1) ? 1 || a + fc (a-1) 
+factorial  : a -> (a = 1) ? 1 || a + factorial (a-1) 
 
 
+fib : n ->  (n < 2) ? n || fib (n-1) + fib (n-2)
 
 
+calculator : _ -> {
+  -> {
+    num1 : int (scan "num1 = " )
+    num2 : int (scan "num2 = ")
 
+    action : scan "action + - * / = " 
 
+    (action = "+") ? print "result = " (add num1 num2)
+    || (action = "-") ? print "result = " (sub num1 num2)
+    || (action = "*") ? print "result = " (mult num1 num2)
+    || (action = "/") ? print "result = " (div num1 num2)
+    || print "unknown action"
+  }
 
-
-
-
+  calculator _
+}
