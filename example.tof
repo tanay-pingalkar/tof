@@ -19,3 +19,12 @@ hello_world : string -> print string
 
 factorial  : a -> (a = 1) ? 1 || a + fc (a-1) 
 
+
+
+
+
+
+
+
+
+

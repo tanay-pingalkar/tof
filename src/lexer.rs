@@ -50,6 +50,7 @@ pub enum NODE {
     MATCH(Box<Match>),
     FCCALL(FcCall),
     CALL(String),
+    SCOPE(Vec<LEX>),
     VOID,
     BOOL(bool),
     OP {
@@ -225,18 +226,21 @@ impl Lexer {
 
                 value = lex;
             }
+            if args.trim() == "" {
+                n = Box::new(NODE::SCOPE(value));
+            } else {
+                let mut args: Vec<String> = args
+                    .split_whitespace()
+                    .collect::<Vec<&str>>()
+                    .iter()
+                    .map(|v| v.trim().to_string())
+                    .collect();
 
-            let mut args: Vec<String> = args
-                .split_whitespace()
-                .collect::<Vec<&str>>()
-                .iter()
-                .map(|v| v.trim().to_string())
-                .collect();
-
-            if args[0] == "_" {
-                args = Vec::new()
+                if args[0] == "_" {
+                    args = Vec::new()
+                }
+                n = Box::new(NODE::LAMDA(Lamda { args, value }));
             }
-            n = Box::new(NODE::LAMDA(Lamda { args, value }))
         } else if FUNC_REGEX.is_match(&part) {
             let splitted = part.split_whitespace().collect::<Vec<&str>>();
             let name = splitted[0];
@@ -334,11 +338,10 @@ impl Lexer {
             if splited.len() == i && is_closed.is() {
                 if is_closed.in_cond {
                     let nl = self.lex_vec[self.coverage + 1].clone();
-                    if nl.trim().starts_with("||") {
+                    if nl.trim().starts_with("||") && !self.if_lv_full() {
                         self.coverage = self.coverage + 1;
                         splited = [
                             splited,
-                            vec!["\n".to_string()],
                             nl.trim()
                                 .split("")
                                 .collect::<Vec<&str>>()
@@ -380,10 +383,39 @@ impl Lexer {
         block.start();
         let block = block.lex();
 
-        let mut nextS = nextS.trim().to_string();
+        let mut is_closed = IsClosed::new();
 
-        if nextS.starts_with("{") && nextS.ends_with("}") {
-            nextS = format!("_->{}", nextS);
+        let mut nextS = nextS
+            .split("")
+            .collect::<Vec<&str>>()
+            .iter()
+            .map(|v| {
+                is_closed.check(&v);
+                v.to_string()
+            })
+            .collect();
+
+        if !is_closed.is() {
+            loop {
+                self.coverage = self.coverage + 1;
+                let nl = self.lex_vec[self.coverage].clone();
+                let nl = nl
+                    .trim()
+                    .split("")
+                    .collect::<Vec<&str>>()
+                    .iter()
+                    .map(|v| {
+                        is_closed.check(v);
+                        v.to_string()
+                    })
+                    .collect::<Vec<String>>()
+                    .join("");
+                nextS = [nextS, "\n".to_string(), nl].concat();
+
+                if is_closed.is() {
+                    break;
+                }
+            }
         }
 
         let lex;
@@ -426,6 +458,10 @@ impl Lexer {
             next,
             criteria: Some(MatchesCriteria::ELIF),
         })))
+    }
+
+    pub fn if_lv_full(&self) -> bool {
+        self.lex_vec.len() == self.coverage
     }
 
     pub fn lex(&self) -> Vec<LEX> {

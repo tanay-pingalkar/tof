@@ -247,6 +247,9 @@ impl Runtime {
             NODE::BOOL(bool) => {
                 v = Variable::Bool(bool);
             }
+            NODE::SCOPE(s) => {
+                v = self.eval(s, self.data.scopes_number(), vec![], vec![], true);
+            }
         }
         v
     }
