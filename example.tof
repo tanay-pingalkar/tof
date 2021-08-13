@@ -1,27 +1,27 @@
 
-add : num1 num2 -> num1 + num2
-
-sub : num1 num2 -> num1 - num2
-
-mult : num1 num2 -> num1 * num2
-
-div : num1 num2 -> num1 / num2
-
-
+// a basic adder
 sum : _ -> {
   num1 : int (scan "num1 = " )
   num2 : int (scan "num2 = ")
   print "result = " (add num1 num2)
 }
 
+// hello world in tof `print "hello world"`
+
 hello_world : string -> print string
 
+
+// factorial recursion
 
 factorial  : a -> (a = 1) ? 1 || a + factorial (a-1) 
 
 
+// fibonnaci recursion
+
 fib : n ->  (n < 2) ? n || fib (n-1) + fib (n-2)
 
+
+// calculator example to show else if chain 
 
 calculator : _ -> {
   -> {
@@ -39,3 +39,31 @@ calculator : _ -> {
 
   calculator _
 }
+
+
+// lamda
+
+useLamda : lamda -> lamda "hello to lamda"
+
+// call lamda like thee - useLamda (msg -> print msg)
+
+
+// some operators
+add : num1 num2 -> num1 + num2
+
+sub : num1 num2 -> num1 - num2
+
+mult : num1 num2 -> num1 * num2
+
+div : num1 num2 -> num1 / num2
+
+greaterThan : num1 num2 -> num1 > num2
+
+smallerThan :  num1 num2 -> num1 < num2
+
+notEqual :  num1 num2 -> num1 ! num2
+
+equal :  num1 num2 -> num1 = num2
+
+
+print "hello world"

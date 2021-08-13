@@ -8,7 +8,6 @@ pub fn stdio(var: &Variable) {
         Variable::Rusty(_) => print!("a rusty function"),
         Variable::Int(int) => print!("{}", int),
         Variable::Str(string) => print!("{}", string),
-        Variable::Void => print!("VOID"),
         Variable::Bool(bool) => print!("{}", bool),
     }
     stdout().flush().unwrap();
@@ -22,7 +21,7 @@ pub fn prelude(data: &mut Vars) {
                 stdio(&var);
             }
             stdio(&Variable::Str("\n".to_string()));
-            Variable::Void
+            None
         }),
     );
 
@@ -34,40 +33,40 @@ pub fn prelude(data: &mut Vars) {
 
             stdin().read_line(&mut string).unwrap();
             string.pop();
-            Variable::Str(string)
+            Some(Variable::Str(string))
         }),
     );
 
     data.insert(
         "int".to_string(),
         Variable::Rusty(|args| {
-            let int = match args[0].clone() {
-                Variable::Int(int) => int,
-                Variable::Str(string) => string.parse().unwrap(),
+            let int = match &args[0] {
+                Variable::Int(int) => int.clone(),
+                Variable::Str(string) => string.parse::<f64>().unwrap(),
                 _ => panic!("cannot parse"),
             };
-            Variable::Int(int.clone())
+            Some(Variable::Int(int.clone()))
         }),
     );
     data.insert(
         "len".to_string(),
         Variable::Rusty(|args| {
-            let len = match args[0].clone() {
+            let len = match &args[0] {
                 Variable::Str(str) => str,
                 _ => panic!("only give len of string"),
             };
             let len = len.len();
-            Variable::Int(len as f64)
+            Some(Variable::Int(len as f64))
         }),
     );
     data.insert(
         "rand".to_string(),
-        Variable::Rusty(|_args| Variable::Int(random::<f64>())),
+        Variable::Rusty(|_args| Some(Variable::Int(random::<f64>()))),
     );
     data.insert(
         "round".to_string(),
         Variable::Rusty(|args| match args[0] {
-            Variable::Int(i) => Variable::Int(i.round() as f64),
+            Variable::Int(i) => Some(Variable::Int(i.round() as f64)),
             _ => panic!("only numbers please"),
         }),
     );

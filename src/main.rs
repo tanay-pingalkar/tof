@@ -39,14 +39,14 @@ struct Run {
     show_tokens: bool,
 }
 
-mod lexer;
 mod prelude;
 mod runtime;
+mod tokenizer;
 
 use runtime::Runtime;
 
 mod utils;
-use crate::lexer::Lexer;
+use tokenizer::Tokenizer;
 
 fn main() {
     let matches: Opts = Opts::parse();
@@ -54,14 +54,14 @@ fn main() {
     match matches.subcommand {
         Subcommand::Run(Run { file, show_tokens }) => {
             let string = fs::read_to_string(format!("{}.tof", file)).expect("file not found");
-            let mut lexer = Lexer::new(string);
-            lexer.start();
+            let mut tokenizer = Tokenizer::new(&string);
+            tokenizer.start();
             if show_tokens {
-                println!("{:#?}", lexer.lex());
+                println!("{:#?}", tokenizer.tokens);
             }
             let mut runtime = Runtime::new();
 
-            runtime.eval(lexer.lex(), 1, vec![], vec![], true);
+            runtime.eval(tokenizer.tokens, 1, vec![], vec![], true);
         }
         Subcommand::Play => {
             let mut rl = Editor::<()>::new();
@@ -75,10 +75,10 @@ fn main() {
                     Ok(line) => {
                         rl.add_history_entry(line.as_str());
 
-                        let mut lexer = Lexer::new(line.to_string());
+                        let mut lexer = Tokenizer::new(&line);
                         lexer.start();
 
-                        runtime.eval(lexer.lex(), i, vec![], vec![], false);
+                        runtime.eval(lexer.tokens, i, vec![], vec![], false);
 
                         i = i + 1;
                     }
@@ -97,6 +97,5 @@ fn main() {
                 }
             }
         }
-        _ => {}
     }
 }
