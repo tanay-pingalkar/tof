@@ -64,6 +64,3 @@ smallerThan :  num1 num2 -> num1 < num2
 notEqual :  num1 num2 -> num1 ! num2
 
 equal :  num1 num2 -> num1 = num2
-
-
-print "hello world"

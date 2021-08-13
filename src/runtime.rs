@@ -129,6 +129,7 @@ impl Runtime {
                 panic!("you cannot store void value");
             }
         };
+
         self.data.insert(def.name, val);
     }
 
@@ -149,7 +150,7 @@ impl Runtime {
                 let (fc_scope, fc) = match tempd.get(&name, scope) {
                     Some(v) => v,
                     None => {
-                        panic!("vraible not found {}", name);
+                        panic!("varible not found {}", name);
                     }
                 };
 

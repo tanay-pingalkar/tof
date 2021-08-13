@@ -135,7 +135,8 @@ impl Tokenizer {
 
     pub fn def_resolver(&mut self, line: &str) -> Option<Tokens> {
         let (name, value) = line.split_once(":").unwrap();
-        if CALL_REGEX.is_match(name.trim()) && !WHITE_REGEX.is_match(name.trim()) {
+
+        if CALL_REGEX.is_match(name.trim()) {
             Some(Tokens {
                 line_number: self.coverage + 1,
                 token: Token::Def(Def {
@@ -248,10 +249,19 @@ impl Tokenizer {
                 args: self.args_resolver(&part[name.len()..]),
                 name: name.to_string(),
             }))
+        } else if INT_REGEX.is_match(&part) {
+            n = match part.parse() {
+                Ok(p) => Box::new(Expr::Int(p)),
+                Err(_) => {
+                    if CALL_REGEX.is_match(&part) {
+                        Box::new(Expr::Call(part.to_string()))
+                    } else {
+                        panic!("not a type : {} on line {}", part, self.coverage);
+                    }
+                }
+            }
         } else if CALL_REGEX.is_match(&part) {
             n = Box::new(Expr::Call(part.to_string()))
-        } else if INT_REGEX.is_match(&part) {
-            n = Box::new(Expr::Int(part.parse().unwrap()));
         } else {
             panic!("not a type : {} on line {}", part, self.coverage);
         }
